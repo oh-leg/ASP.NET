@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PromoCodeFactory.WebHost.Mapping;
 using PromoCodeFactory.WebHost.Models;
+using System.Diagnostics;
 
 namespace PromoCodeFactory.WebHost.Controllers;
 
@@ -34,7 +35,23 @@ public class EmployeesController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
     public async Task<ActionResult<EmployeeResponse>> GetById([FromRoute] Guid id, CancellationToken ct)
     {
-        throw new NotImplementedException();
+        var employee = await employeeRepository.GetById(id, ct);
+
+        if (employee == null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Сотрудник не найден",
+                Status = 404,
+                Detail = $"Сотрудник с идентификатором \"{id}\" не найден",
+                Extensions =
+                {
+                    ["traceId"] = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        return Ok(Mapper.ToEmployeeResponse(employee));
     }
 
     /// <summary>
@@ -45,7 +62,32 @@ public class EmployeesController(
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<EmployeeResponse>> Create([FromBody] EmployeeCreateRequest request, CancellationToken ct)
     {
-        throw new NotImplementedException();
+        var role = await roleRepository.GetById(request.RoleId, ct);
+
+        if (role == null)
+        {
+            // Из ДЗ: "Если не найден Role, то возвращать BadRequest"
+            // Спорный статус, если не найдено не должно ли быть NotFound?
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Роль не найдена",
+                Status = 400,
+                Detail = $"Не удалось поднять роль по идентификатору {request.RoleId}",
+                Extensions =
+                {
+                    ["traceId"] = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        var employeeCreate = Mapper.ToEmployee(request, role);
+        await employeeRepository.Add(employeeCreate, ct);
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = employeeCreate.Id },
+            Mapper.ToEmployeeResponse(employeeCreate)
+        );
     }
 
     /// <summary>
@@ -60,7 +102,43 @@ public class EmployeesController(
         [FromBody] EmployeeUpdateRequest request,
         CancellationToken ct)
     {
-        throw new NotImplementedException();
+        var employee = await employeeRepository.GetById(id, ct);
+
+        if (employee == null)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Сотрудник не найден",
+                Status = 404,
+                Detail = $"Сотрудник с идентификатором \"{id}\" не найден",
+                Extensions =
+                {
+                    ["traceId"] = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        var role = await roleRepository.GetById(request.RoleId, ct);
+
+        if (role == null)
+        {
+            // Из ДЗ: "Если не найден Role, то возвращать BadRequest"
+            // Спорный статус, если не найдено не должно ли быть NotFound?
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Роль не найдена",
+                Status = 400,
+                Detail = $"Не удалось поднять роль по идентификатору {request.RoleId}",
+                Extensions =
+                {
+                    ["traceId"] = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        var updateEmployee = Mapper.ToEmployee(id, employee.AppliedPromocodesCount, request, role);
+        await employeeRepository.Update(updateEmployee, ct);
+        return Ok(Mapper.ToEmployeeResponse(updateEmployee));
     }
 
     /// <summary>
@@ -73,6 +151,24 @@ public class EmployeesController(
         [FromRoute] Guid id,
         CancellationToken ct)
     {
-        throw new NotImplementedException();
+        try
+        {
+            await employeeRepository.Delete(id, ct);
+        }
+        catch (EntityNotFoundException)
+        {
+            return NotFound(new ProblemDetails
+            {
+                Title = "Сотрудник не найден",
+                Status = 404,
+                Detail = $"Сотрудник с идентификатором \"{id}\" не найден",
+                Extensions =
+                {
+                    ["traceId"] = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+                }
+            });
+        }
+
+        return NoContent();
     }
 }
