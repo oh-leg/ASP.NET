@@ -42,4 +42,21 @@ public static class Mapper
             AppliedPromocodesCount = 0
         };
     }
+
+    public static Employee ToEmployee(
+        Guid id,
+        int appliedPromocodesCount,
+        EmployeeUpdateRequest request,
+        Role role)
+    {
+        return new Employee
+        {
+            Id = id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            Email = request.Email,
+            Role = role,
+            AppliedPromocodesCount = appliedPromocodesCount
+        };
+    }
 }
