@@ -1,6 +1,6 @@
 services:
   promo-api:
-    image: ghcr.io/oh-leg/asp.net:latest
+    image: ghcr.io/oh-leg/asp-net:latest
     ports:
       - "8080:8080"
     restart: always
