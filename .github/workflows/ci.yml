@@ -24,6 +24,12 @@ jobs:
             - name: "Клонирование репозитория"
               uses: actions/checkout@v4
 
+            - name: "Преобразование имени репозитория"
+              run: |
+                REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | sed 's/\./-/g')
+                echo "IMAGE_NAME=$REPO_LOWER" >> $GITHUB_ENV
+                echo "Имя образа: ghcr.io/$REPO_LOWER"
+
             - name: "Вход в GitHub Container Registry"
               uses: docker/login-action@v3
               with:
