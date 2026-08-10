@@ -1,0 +1,46 @@
+name: "Сборка и публикация образа"
+
+on:
+    push:
+        branches: 
+            - main
+            - feature/homework-6 # для проверки
+        paths: 
+            - 'Homeworks/06 Настройка CI/**'
+    workflow_dispatch: 
+
+env:
+    REGISTRY: ghcr.io
+    IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+    build-and-push:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            packages: write
+
+        steps:
+            - name: "Клонирование репозитория"
+              uses: actions/checkout@v4
+
+            - name: "Преобразование имени репозитория"
+              run: |
+                REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]' | sed 's/\./-/g')
+                echo "IMAGE_NAME=$REPO_LOWER" >> $GITHUB_ENV
+                echo "Имя образа: ghcr.io/$REPO_LOWER"
+
+            - name: "Вход в GitHub Container Registry"
+              uses: docker/login-action@v3
+              with:
+                registry: ${{ env.REGISTRY }}
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: "Сборка и публикация образа"
+              uses: docker/build-push-action@v6
+              with:
+                context: "./Homeworks/06 Настройка CI/src"
+                file: "./Homeworks/06 Настройка CI/src/Dockerfile"
+                push: true
+                tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
